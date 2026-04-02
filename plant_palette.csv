@@ -1,0 +1,13 @@
+common_name,scientific_name,type,zone,flood_tolerance_hrs,drought_tolerance,spacing_mm,density_per_m2,notes
+Vetiver Grass,Chrysopogon zizanioides,Groundcover grass,Wet/All,96,HIGH,300,11.1,Best root stabiliser; deep fibrous roots; widely available BD
+Canna Lily,Canna indica,Groundcover herb,Wet/Mid,72,MEDIUM,600,2.8,Ornamental; fast establishment; tolerates full ponding
+Kans Grass,Saccharum spontaneum,Groundcover grass,Wet inner,120,MEDIUM,400,6.3,Native; very effective; manage to prevent spreading
+Lemongrass,Cymbopogon citratus,Groundcover grass,Outer/Dry,24,HIGH,500,4.0,Drought resistant; dense clumps prevent edge erosion
+Durba Grass,Cynodon dactylon,Turf,Side slopes,48,HIGH,—,—,Fast-spreading turf; use on batters and berms only
+Wild Turmeric,Curcuma aromatica,Groundcover herb,Mid/Wet,48,MEDIUM,500,4.0,Ornamental; good nutrient uptake; locally available
+Thalia,Thalia dealbata,Groundcover herb,Wet inner,168,LOW,600,2.8,Very high flood tolerance; effective in ponding zone
+Water Plantain,Alisma plantago-aquatica,Groundcover herb,Wet inner,200,LOW,400,6.3,Aquatic-transitional; suited for extended ponding
+Hibiscus,Hibiscus rosa-sinensis,Shrub,Outer edge,24,MEDIUM,1000,1.0,Ornamental; use above ponding zone only
+Oleander,Nerium oleander,Shrub,Outer edge,12,HIGH,1500,0.4,Hardy; drought tolerant; outer berm only
+Bamboo,Bambusa vulgaris,Tree/Shrub,Perimeter,24,MEDIUM,2000,0.25,Rapid establishment; perimeter screen; deep roots
+Water Bamboo,Phragmites karka,Grass,Wet inner,200,LOW,600,2.8,Native to BD; excellent in wet zone; invasive — contain
