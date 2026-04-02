@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Bioretention Cell Design Tool — RUET</title>
+<style>
+/* ── Reset & Base ────────────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--surface:#161b22;--card:#1c2330;--border:#30363d;
+  --accent:#2ea44f;--accent2:#1f6feb;--accent3:#388bfd;
+  --warn:#d29922;--danger:#f85149;--muted:#8b949e;
+  --text:#e6edf3;--text2:#c9d1d9;--text3:#8b949e;
+  --green:#3fb950;--blue:#58a6ff;--orange:#fb8500;
+  --radius:8px;--radius-lg:12px;
+  --shadow:0 4px 24px rgba(0,0,0,0.4);
+}
+html{scroll-behavior:smooth}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  font-size:14px;line-height:1.6;
+  background:var(--bg);color:var(--text);
+  min-height:100vh;
+}
+
+/* ── Scrollbar ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* ── Layout ──────────────────────────────────────────────────────────────── */
+.app{display:grid;grid-template-columns:340px 1fr;min-height:100vh}
+
+/* ── Sidebar ─────────────────────────────────────────────────────────────── */
+.sidebar{
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  position:sticky;top:0;height:100vh;overflow-y:auto;
+}
+.sidebar-header{
+  padding:24px 20px 16px;
+  border-bottom:1px solid var(--border);
+  background:linear-gradient(135deg,#0d419d,#1a7f37);
+}
+.sidebar-header h1{
+  font-size:1.1rem;font-weight:700;letter-spacing:0.3px;
+  color:#fff;line-height:1.3;
+}
+.sidebar-header p{font-size:11px;color:rgba(255,255,255,0.7);margin-top:4px}
+.badge-ver{
+  display:inline-block;background:rgba(255,255,255,0.15);
+  border:1px solid rgba(255,255,255,0.3);
+  border-radius:20px;padding:2px 10px;font-size:10px;
+  color:#fff;margin-top:8px;font-weight:600;letter-spacing:0.5px;
+}
+
+.form-scroll{flex:1;overflow-y:auto;padding:16px}
+
+/* ── Form sections ───────────────────────────────────────────────────────── */
+.form-section{margin-bottom:20px}
+.form-section-title{
+  font-size:10px;font-weight:700;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--accent3);
+  padding:6px 0 8px;border-bottom:1px solid var(--border);
+  margin-bottom:12px;display:flex;align-items:center;gap:6px;
+}
+.form-section-title svg{width:12px;height:12px;opacity:0.8}
+
+.field{margin-bottom:10px}
+.field label{
+  display:block;font-size:11px;font-weight:600;
+  color:var(--text3);margin-bottom:4px;letter-spacing:0.3px;
+}
+.field label .hint{
+  font-weight:400;color:var(--muted);font-size:10px;margin-left:4px;
+}
+.field input,.field select{
+  width:100%;padding:7px 10px;
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius);color:var(--text);
+  font-size:13px;transition:border-color 0.2s,box-shadow 0.2s;
+  appearance:none;
+}
+.field input:focus,.field select:focus{
+  outline:none;border-color:var(--accent2);
+  box-shadow:0 0 0 3px rgba(31,111,235,0.15);
+}
+.field input::placeholder{color:var(--text3)}
+select option{background:var(--surface)}
+
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.field-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+
+/* targets grid */
+.targets-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;
+}
+.target-item label{font-size:11px;font-weight:600;color:var(--text3);
+  display:block;margin-bottom:3px}
+.target-item input{
+  width:100%;padding:6px 8px;
+  background:var(--card);border:1px solid var(--border);
+  border-radius:6px;color:var(--text);font-size:13px;
+  transition:border-color 0.2s;
+}
+.target-item input:focus{outline:none;border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(46,164,79,0.15)}
+
+/* auto-recommended badge */
+.auto-rec{
+  font-size:11px;color:var(--warn);
+  background:rgba(210,153,34,0.12);
+  border:1px solid rgba(210,153,34,0.3);
+  border-radius:4px;padding:3px 8px;margin-bottom:6px;
+  display:none;
+}
+
+/* ── Run button ──────────────────────────────────────────────────────────── */
+.run-btn{
+  margin:16px;
+  background:linear-gradient(135deg,#1a7f37,#2ea44f);
+  border:none;border-radius:var(--radius);
+  color:#fff;font-size:14px;font-weight:700;
+  padding:12px;width:calc(100% - 32px);cursor:pointer;
+  letter-spacing:0.3px;transition:all 0.2s;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.run-btn:hover{background:linear-gradient(135deg,#238636,#3fb950);
+  transform:translateY(-1px);box-shadow:0 4px 16px rgba(46,164,79,0.35)}
+.run-btn:active{transform:translateY(0)}
+.run-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+.spin{
+  width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);
+  border-top-color:#fff;border-radius:50%;
+  animation:spin 0.7s linear infinite;display:none;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Main content area ───────────────────────────────────────────────────── */
+.main{display:flex;flex-direction:column}
+
+/* Hero state (before first run) */
+.hero{
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:60px 40px;text-align:center;
+  gap:20px;
+}
+.hero-icon{
+  width:80px;height:80px;
+  background:linear-gradient(135deg,#0d419d22,#1a7f3722);
+  border:2px solid var(--border);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:36px;
+}
+.hero h2{font-size:1.5rem;font-weight:700;color:var(--text)}
+.hero p{color:var(--text3);max-width:460px;line-height:1.7}
+.hero-steps{
+  display:flex;gap:24px;margin-top:8px;
+}
+.hero-step{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius-lg);padding:16px 20px;
+  text-align:left;min-width:160px;
+}
+.hero-step .num{
+  font-size:10px;font-weight:700;color:var(--accent3);
+  letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;
+}
+.hero-step p{font-size:12px;color:var(--text3);line-height:1.5}
+
+/* ── Results panel ───────────────────────────────────────────────────────── */
+.results{display:none;flex:1;overflow-y:auto;padding:28px 32px}
+
+/* Status bar */
+.status-bar{
+  display:flex;align-items:center;gap:12px;
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius-lg);padding:14px 20px;
+  margin-bottom:24px;
+}
+.status-dot{width:10px;height:10px;border-radius:50%;
+  background:var(--green);box-shadow:0 0 0 3px rgba(63,185,80,0.2)}
+.status-bar .proj{font-weight:700;font-size:1rem;color:var(--text)}
+.status-bar .ts{font-size:11px;color:var(--text3);margin-left:auto}
+
+/* KPI grid */
+.kpi-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+  gap:12px;margin-bottom:24px;
+}
+.kpi{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius-lg);padding:16px 18px;
+  position:relative;overflow:hidden;
+}
+.kpi::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:var(--accent-kpi,var(--accent));
+}
+.kpi .label{font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:0.8px;color:var(--text3);margin-bottom:4px}
+.kpi .value{font-size:1.4rem;font-weight:800;color:var(--text);
+  line-height:1.2}
+.kpi .unit{font-size:11px;color:var(--text3);margin-top:2px}
+
+/* Result sections */
+.res-section{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius-lg);padding:20px 24px;margin-bottom:16px;
+}
+.res-section h3{
+  font-size:12px;font-weight:700;text-transform:uppercase;
+  letter-spacing:1px;color:var(--accent3);
+  padding-bottom:10px;border-bottom:1px solid var(--border);
+  margin-bottom:14px;display:flex;align-items:center;gap:6px;
+}
+.res-table{width:100%;border-collapse:collapse;font-size:13px}
+.res-table td{padding:6px 0;border-bottom:1px solid var(--border);
+  color:var(--text2)}
+.res-table td:first-child{color:var(--text3);width:55%}
+.res-table td:last-child{text-align:right;font-weight:600;
+  font-family:'SF Mono',Consolas,monospace;color:var(--text)}
+.res-table tr:last-child td{border-bottom:none}
+
+/* Pollutant bars */
+.poll-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.poll-card{
+  background:var(--bg);border:1px solid var(--border);
+  border-radius:var(--radius);padding:14px;
+}
+.poll-card .p-name{font-size:11px;font-weight:700;
+  color:var(--text3);text-transform:uppercase;letter-spacing:0.8px}
+.poll-card .p-val{font-size:1.6rem;font-weight:800;margin:4px 0;
+  color:var(--text)}
+.poll-card .p-bar-bg{
+  height:5px;border-radius:3px;background:var(--border);margin-top:6px;
+}
+.poll-card .p-bar{height:5px;border-radius:3px;
+  background:var(--green);transition:width 0.8s ease}
+
+/* Volume balance bar */
+.vol-bar-wrap{margin-top:12px}
+.vol-segments{
+  display:flex;height:22px;border-radius:6px;overflow:hidden;
+  margin-bottom:8px;
+}
+.vol-seg{transition:width 0.8s ease;position:relative}
+.vol-seg:hover::after{
+  content:attr(data-tip);
+  position:absolute;top:-28px;left:50%;transform:translateX(-50%);
+  background:#000;color:#fff;padding:2px 8px;border-radius:4px;
+  font-size:11px;white-space:nowrap;pointer-events:none;z-index:10;
+}
+.vol-legend{display:flex;gap:14px;flex-wrap:wrap}
+.vol-leg-item{display:flex;align-items:center;gap:5px;font-size:11px;
+  color:var(--text3)}
+.vol-leg-dot{width:10px;height:10px;border-radius:2px}
+
+/* Checks */
+.checks-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.check-item{
+  display:flex;align-items:center;gap:8px;
+  background:var(--bg);border:1px solid var(--border);
+  border-radius:var(--radius);padding:9px 12px;
+}
+.check-item .ck-icon{font-size:14px;flex-shrink:0}
+.check-item .ck-label{font-size:12px;color:var(--text2)}
+.check-item .ck-val{font-size:11px;color:var(--text3);margin-left:auto;
+  font-family:monospace}
+
+/* Warnings */
+.warnings-box{
+  background:rgba(210,153,34,0.08);
+  border:1px solid rgba(210,153,34,0.3);
+  border-radius:var(--radius);padding:12px 16px;
+  margin-bottom:16px;display:none;
+}
+.warnings-box h4{color:var(--warn);font-size:12px;
+  font-weight:700;margin-bottom:6px}
+.warnings-box ul{padding-left:16px}
+.warnings-box li{font-size:12px;color:var(--text2);margin-bottom:3px}
+
+/* ── Figures gallery ─────────────────────────────────────────────────────── */
+.fig-tabs{
+  display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;
+}
+.fig-tab{
+  padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;
+  cursor:pointer;border:1px solid var(--border);background:var(--card);
+  color:var(--text3);transition:all 0.18s;
+}
+.fig-tab.active,.fig-tab:hover{
+  background:var(--accent2);border-color:var(--accent2);color:#fff;
+}
+.fig-pane{display:none}
+.fig-pane.active{display:block}
+.fig-pane img{
+  width:100%;border-radius:var(--radius);
+  border:1px solid var(--border);
+  background:var(--bg);
+}
+.fig-loading{
+  height:200px;display:flex;align-items:center;justify-content:center;
+  color:var(--text3);font-size:13px;
+}
+.dl-bar{
+  display:none;padding:16px 32px;
+  background:var(--surface);border-top:1px solid var(--border);
+  display:flex;gap:12px;align-items:center;flex-wrap:wrap;
+}
+.dl-btn{
+  display:flex;align-items:center;gap:8px;
+  padding:9px 18px;border-radius:var(--radius);
+  font-size:13px;font-weight:600;cursor:pointer;
+  text-decoration:none;transition:all 0.2s;border:none;
+}
+.dl-btn-primary{
+  background:var(--accent2);color:#fff;
+}
+.dl-btn-primary:hover{background:#388bfd;box-shadow:0 4px 12px rgba(31,111,235,0.35)}
+.dl-btn-secondary{
+  background:var(--card);color:var(--text);
+  border:1px solid var(--border);
+}
+.dl-btn-secondary:hover{background:var(--border)}
+.dl-bar .dl-note{font-size:11px;color:var(--text3);margin-left:auto}
+
+/* ── Error toast ─────────────────────────────────────────────────────────── */
+.toast{
+  position:fixed;bottom:24px;right:24px;z-index:999;
+  background:#f85149;color:#fff;border-radius:var(--radius);
+  padding:12px 18px;font-size:13px;font-weight:600;
+  box-shadow:var(--shadow);max-width:360px;
+  transform:translateY(80px);opacity:0;transition:all 0.3s;
+  display:flex;align-items:flex-start;gap:10px;
+}
+.toast.show{transform:translateY(0);opacity:1}
+.toast-close{cursor:pointer;font-size:16px;line-height:1;
+  opacity:0.8;flex-shrink:0;margin-left:auto}
+
+/* ── Loading overlay ─────────────────────────────────────────────────────── */
+.loading-overlay{
+  display:none;position:fixed;inset:0;z-index:100;
+  background:rgba(13,17,23,0.85);backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;flex-direction:column;gap:16px;
+}
+.loading-overlay.show{display:flex}
+.loader-ring{
+  width:56px;height:56px;
+  border:4px solid var(--border);
+  border-top-color:var(--accent);
+  border-radius:50%;
+  animation:spin 0.9s linear infinite;
+}
+.loading-overlay p{color:var(--text2);font-size:14px}
+.loading-overlay .sub{color:var(--text3);font-size:12px}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loader-ring"></div>
+  <p>Running Design Engine…</p>
+  <span class="sub">Routing hydrograph · Sizing cell · Generating reports</span>
+</div>
+
+<div class="toast" id="toast">
+  <span id="toastMsg"></span>
+  <span class="toast-close" onclick="hideToast()">✕</span>
+</div>
+
+<div class="app">
+
+  <!-- ════════════════════ SIDEBAR ════════════════════ -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h1>Bioretention Cell<br>Design Tool</h1>
+      <p>Dept. of Civil Engineering · RUET</p>
+      <span class="badge-ver">v3 · Analytical Engine</span>
+    </div>
+
+    <div class="form-scroll">
+
+      <!-- Step 1 -->
+      <div class="form-section">
+        <div class="form-section-title">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 2a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 01-1.5.86L8 13.12l-4.5 1.74A1 1 0 012 14V2z"/></svg>
+          Project Information
+        </div>
+        <div class="field">
+          <label>Project Name</label>
+          <input type="text" id="proj_name" value="Bioretention Design — RUET Campus" placeholder="e.g. Campus Stormwater Retrofit"/>
+        </div>
+        <div class="field">
+          <label>Location / Subcatchment ID</label>
+          <input type="text" id="proj_loc" value="SC-01"/>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="form-section">
+        <div class="form-section-title">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a.5.5 0 01.5.5v1a.5.5 0 01-1 0v-1A.5.5 0 018 1zM4.5 3.5a.5.5 0 010-.707l.707-.707a.5.5 0 01.707.707l-.707.707a.5.5 0 01-.707 0zm7.293-.707a.5.5 0 010 .707l-.707.707a.5.5 0 01-.707-.707l.707-.707a.5.5 0 01.707 0zM8 4a4 4 0 100 8 4 4 0 000-8z"/></svg>
+          Precipitation
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Division</label>
+            <select id="region">
+              {% for d in divs %}
+              <option value="{{d}}" {{'selected' if d=='Rajshahi' else ''}}>{{d}}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label>Return Period</label>
+            <select id="return_period">
+              <option value="2yr" selected>2-yr ARI</option>
+              <option value="10yr">10-yr ARI</option>
+              <option value="25yr">25-yr ARI</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="form-section">
+        <div class="form-section-title">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 2a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H2a1 1 0 01-1-1V2zm0 5a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H2a1 1 0 01-1-1V7zm0 5a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H2a1 1 0 01-1-1v-2z"/></svg>
+          Catchment &amp; Site
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Catchment Area <span class="hint">(m²)</span></label>
+            <input type="number" id="catchment_area" value="44700" min="100"/>
+          </div>
+          <div class="field">
+            <label>% Impervious</label>
+            <input type="number" id="pct_impervious" value="38" min="0" max="100"/>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Annual Rainfall <span class="hint">(mm/yr)</span></label>
+            <input type="number" id="annual_rainfall" value="1431"/>
+          </div>
+          <div class="field">
+            <label>Avail. Space <span class="hint">(m², 0=∞)</span></label>
+            <input type="number" id="avail_space" value="0" min="0"/>
+          </div>
+        </div>
+        <div class="field">
+          <label>Max Cell Width <span class="hint">(m, 0=15 m limit)</span></label>
+          <input type="number" id="max_width" value="0" min="0" max="30"/>
+        </div>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="form-section">
+        <div class="form-section-title">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zm0 14C4.69 14 2 11.31 2 8s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/></svg>
+          Soil &amp; Groundwater
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Native Ksat <span class="hint">(mm/hr)</span></label>
+            <input type="number" id="native_ksat" value="10" min="0" step="0.1" oninput="autoProfile()"/>
+          </div>
+          <div class="field">
+            <label>Water Table <span class="hint">(m BGL)</span></label>
+            <input type="number" id="wt_depth" value="2.5" min="0" step="0.1" oninput="autoProfile()"/>
+          </div>
+        </div>
+        <div class="auto-rec" id="autoRec">Auto-recommended profile updating…</div>
+        <div class="field">
+          <label>Drainage Profile</label>
+          <select id="profile">
+            {% for val,label in profiles %}
+            <option value="{{val}}">{{label}}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <!-- Step 5 -->
+      <div class="form-section">
+        <div class="form-section-title">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 3.5A1.5 1.5 0 012.5 2h11A1.5 1.5 0 0115 3.5v9a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 011 12.5v-9z"/></svg>
+          Filter Media
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Filter Ksat <span class="hint">(mm/hr)</span></label>
+            <input type="number" id="filter_ksat" value="180" min="50" max="600"/>
+          </div>
+          <div class="field">
+            <label>Filter Depth <span class="hint">(mm)</span></label>
+            <input type="number" id="filter_depth" value="800" min="600" max="1500"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- Design Targets -->
+      <div class="form-section">
+        <div class="form-section-title">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 15A7 7 0 108 1a7 7 0 000 14zm0 1A8 8 0 118 0a8 8 0 010 16z"/><path d="M8 11a3 3 0 110-6 3 3 0 010 6z"/></svg>
+          Design Targets
+        </div>
+        <div class="targets-grid">
+          <div class="target-item">
+            <label>Volume Capture (%)</label>
+            <input type="number" id="target_vol" value="90" min="0" max="100"/>
+          </div>
+          <div class="target-item">
+            <label>TSS Removal (%)</label>
+            <input type="number" id="target_tss" value="85" min="0" max="100"/>
+          </div>
+          <div class="target-item">
+            <label>TP Removal (%)</label>
+            <input type="number" id="target_tp" value="60" min="0" max="100"/>
+          </div>
+          <div class="target-item">
+            <label>TN Removal (%)</label>
+            <input type="number" id="target_tn" value="40" min="0" max="100"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 6 -->
+      <div class="form-section">
+        <div class="form-section-title">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 8a7 7 0 1014 0A7 7 0 001 8zm15 0A8 8 0 110 8a8 8 0 0116 0z"/><path d="M9 8a1 1 0 11-2 0 1 1 0 012 0z"/></svg>
+          Underdrain Pipe
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Slope (%)</label>
+            <input type="number" id="ud_slope" value="1.0" min="0.5" max="5" step="0.1"/>
+          </div>
+          <div class="field">
+            <label>No. of Pipes</label>
+            <select id="n_pipes">
+              <option value="1" selected>1 pipe</option>
+              <option value="2">2 pipes</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /form-scroll -->
+
+    <button class="run-btn" id="runBtn" onclick="runDesign()">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2l10 6-10 6V2z"/></svg>
+      <span id="runLabel">Run Design</span>
+      <div class="spin" id="btnSpin"></div>
+    </button>
+  </aside>
+
+  <!-- ════════════════════ MAIN AREA ════════════════════ -->
+  <div class="main">
+
+    <!-- Hero -->
+    <div class="hero" id="heroPanel">
+      <div class="hero-icon">🌿</div>
+      <h2>Bioretention Cell Design</h2>
+      <p>Fill in the project parameters on the left and click <strong>Run Design</strong> to generate a fully analytical, literature-backed bioretention cell sizing.</p>
+      <div class="hero-steps">
+        <div class="hero-step">
+          <div class="num">Step 1–3</div>
+          <p>Enter project, rainfall, and catchment data</p>
+        </div>
+        <div class="hero-step">
+          <div class="num">Step 4–6</div>
+          <p>Set soil conditions, media, and targets</p>
+        </div>
+        <div class="hero-step">
+          <div class="num">Output</div>
+          <p>Download Design Report + Calculation Basis</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="results" id="resultsPanel">
+
+      <div class="status-bar">
+        <div class="status-dot"></div>
+        <span class="proj" id="rProjName">—</span>
+        <span class="ts" id="rTs">—</span>
+      </div>
+
+      <div class="warnings-box" id="warningsBox">
+        <h4>⚠ Design Warnings</h4>
+        <ul id="warningsList"></ul>
+      </div>
+
+      <!-- KPI strip -->
+      <div class="kpi-grid" id="kpiGrid"></div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+        <!-- Catchment & Cell -->
+        <div class="res-section">
+          <h3>📐 Catchment &amp; Cell Sizing</h3>
+          <table class="res-table" id="tblCatchment"></table>
+        </div>
+
+        <!-- Layer Profile -->
+        <div class="res-section">
+          <h3>📏 Layer Profile</h3>
+          <table class="res-table" id="tblLayer"></table>
+        </div>
+
+        <!-- Underdrain -->
+        <div class="res-section">
+          <h3>🔩 Underdrain Pipe (Manning's)</h3>
+          <table class="res-table" id="tblUnderdrain"></table>
+        </div>
+
+        <!-- Drain-down -->
+        <div class="res-section">
+          <h3>⏱ Drain-Down &amp; Overflow</h3>
+          <table class="res-table" id="tblDraindown"></table>
+        </div>
+      </div>
+
+      <!-- Volume Balance -->
+      <div class="res-section">
+        <h3>💧 Volume Balance</h3>
+        <div class="vol-bar-wrap">
+          <div class="vol-segments" id="volBar"></div>
+          <div class="vol-legend" id="volLegend"></div>
+        </div>
+        <br/>
+        <table class="res-table" id="tblVolume"></table>
+      </div>
+
+      <!-- Pollutants -->
+      <div class="res-section">
+        <h3>🧪 Pollutant Removal</h3>
+        <div class="poll-grid" id="pollGrid"></div>
+      </div>
+
+      <!-- Design Checks -->
+      <div class="res-section">
+        <h3>✅ Design Checks</h3>
+        <div class="checks-grid" id="checksGrid"></div>
+      </div>
+
+      <!-- Figures Gallery -->
+      <div class="res-section" id="figuresSection" style="display:none">
+        <h3>📊 Analysis Figures</h3>
+        <div class="fig-tabs" id="figTabs"></div>
+        <div id="figPanes"></div>
+      </div>
+
+    </div><!-- /results -->
+
+    <!-- Download bar -->
+    <div class="dl-bar" id="dlBar">
+      <a class="dl-btn dl-btn-primary" href="/download/report" id="dlReport">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 01.5.5v2.5a1 1 0 001 1h12a1 1 0 001-1v-2.5a.5.5 0 011 0v2.5a2 2 0 01-2 2H2a2 2 0 01-2-2v-2.5a.5.5 0 01.5-.5z"/><path d="M7.646 11.854a.5.5 0 00.708 0l3-3a.5.5 0 00-.708-.708L8.5 10.293V1.5a.5.5 0 00-1 0v8.793L5.354 8.146a.5.5 0 10-.708.708l3 3z"/></svg>
+        Download Design Report
+      </a>
+      <a class="dl-btn dl-btn-secondary" href="/download/calc_basis" id="dlCalc">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M5.854 4.854a.5.5 0 10-.708-.708l-3.5 3.5a.5.5 0 000 .708l3.5 3.5a.5.5 0 00.708-.708L2.707 8l3.147-3.146zm4 0a.5.5 0 01.708-.708l3.5 3.5a.5.5 0 010 .708l-3.5 3.5a.5.5 0 01-.708-.708L13.293 8l-3.147-3.146z"/></svg>
+        Download Calculation Basis
+      </a>
+      <span class="dl-note">Open in browser · MathJax formulas require internet</span>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+// ── Profile auto-recommend ────────────────────────────────────────────────────
+function autoProfile(){
+  const ksat = parseFloat(document.getElementById('native_ksat').value)||0;
+  const wt   = parseFloat(document.getElementById('wt_depth').value)||0;
+  let rec;
+  if(ksat < 15 || wt < 1.5)        rec = 'Type2_Sealed';
+  else if(ksat < 50)                rec = 'Type3_Conventional';
+  else                              rec = 'Type4_Pipeless';
+  const sel = document.getElementById('profile');
+  sel.value = rec;
+  const ar = document.getElementById('autoRec');
+  ar.textContent = `Auto-recommended: ${rec.replace('_',' ')}`;
+  ar.style.display = 'block';
+  setTimeout(()=>ar.style.display='none', 2500);
+}
+autoProfile();
+
+// ── Run design ────────────────────────────────────────────────────────────────
+function g(id){ return document.getElementById(id); }
+
+async function runDesign(){
+  const params = {
+    proj_name:       g('proj_name').value.trim() || 'Bioretention Design',
+    proj_loc:        g('proj_loc').value.trim()  || 'SC-01',
+    region:          g('region').value,
+    return_period:   g('return_period').value,
+    catchment_area:  g('catchment_area').value,
+    pct_impervious:  g('pct_impervious').value,
+    annual_rainfall: g('annual_rainfall').value,
+    avail_space:     g('avail_space').value,
+    max_width:       g('max_width').value,
+    native_ksat:     g('native_ksat').value,
+    wt_depth:        g('wt_depth').value,
+    profile:         g('profile').value,
+    filter_ksat:     g('filter_ksat').value,
+    filter_depth:    g('filter_depth').value,
+    target_vol:      g('target_vol').value,
+    target_tss:      g('target_tss').value,
+    target_tp:       g('target_tp').value,
+    target_tn:       g('target_tn').value,
+    ud_slope:        g('ud_slope').value,
+    n_pipes:         g('n_pipes').value,
+  };
+
+  setLoading(true);
+
+  try{
+    const res = await fetch('/run',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(params)
+    });
+    const data = await res.json();
+    if(!data.ok) throw new Error(data.error || 'Unknown error');
+    renderResults(data.summary, data.warnings, params, data.figures || {});
+  } catch(e){
+    showToast('Design failed: ' + e.message);
+  } finally{
+    setLoading(false);
+  }
+}
+
+function setLoading(on){
+  g('loadingOverlay').classList.toggle('show', on);
+  g('runBtn').disabled = on;
+  g('btnSpin').style.display = on ? 'block' : 'none';
+  g('runLabel').textContent = on ? 'Running…' : 'Run Design';
+}
+
+// ── Render results ────────────────────────────────────────────────────────────
+function fmt(v, dp=2){ return typeof v==='number' ? v.toFixed(dp) : v; }
+function fmtN(v){ return typeof v==='number' ? v.toLocaleString() : v; }
+
+function renderResults(s, warnings, params, figures){
+  g('heroPanel').style.display = 'none';
+  g('resultsPanel').style.display = 'block';
+  g('dlBar').style.display = 'flex';
+
+  const now = new Date().toLocaleString();
+  g('rProjName').textContent = params.proj_name || 'Design Result';
+  g('rTs').textContent = now;
+
+  // Warnings
+  const wb = g('warningsBox');
+  const wl = g('warningsList');
+  wl.innerHTML = '';
+  if(warnings && warnings.length > 0){
+    warnings.forEach(w=>{ const li=document.createElement('li'); li.textContent=w; wl.appendChild(li); });
+    wb.style.display = 'block';
+  } else {
+    wb.style.display = 'none';
+  }
+
+  // KPIs
+  const kpis = [
+    {label:'Cell Area',      value:fmtN(s.cell_area_m2),         unit:'m²',   color:'#2ea44f'},
+    {label:'Filter Depth',   value:s.filter_depth_mm,             unit:'mm',   color:'#388bfd'},
+    {label:'Volume Captured',value:s.V_captured_pct.toFixed(1),   unit:'%',    color:'#3fb950'},
+    {label:'TSS Removal',    value:s.tss_removal_pct.toFixed(1),  unit:'%',    color:'#a371f7'},
+    {label:'TP Removal',     value:s.tp_removal_pct.toFixed(1),   unit:'%',    color:'#f78166'},
+    {label:'TN Removal',     value:s.tn_removal_pct.toFixed(1),   unit:'%',    color:'#ffa657'},
+    {label:'Drain-Down',     value:s.drain_time_hr.toFixed(1),    unit:'hr',   color:s.drain_ok?'#3fb950':'#f85149'},
+    {label:'Peak Reduction', value:s.peak_red_pct.toFixed(1),     unit:'%',    color:'#58a6ff'},
+  ];
+  g('kpiGrid').innerHTML = kpis.map(k=>`
+    <div class="kpi" style="--accent-kpi:${k.color}">
+      <div class="label">${k.label}</div>
+      <div class="value">${k.value}</div>
+      <div class="unit">${k.unit}</div>
+    </div>`).join('');
+
+  // Catchment table
+  tbl('tblCatchment',[
+    ['Catchment Area',        fmtN(s.catchment_area_m2)+'  m²'],
+    ['% Impervious',          s.pct_impervious+'  %'],
+    ['Rv (runoff coeff.)',     s.Rv.toFixed(4)],
+    ['WQV',                   s.WQV_m3.toFixed(2)+'  m³'],
+    ['Annual Runoff',         fmtN(s.annual_runoff_m3yr)+'  m³/yr'],
+    ['Design Cell Area',      s.cell_area_m2.toFixed(1)+'  m²'],
+    ['% of Catchment',        s.pct_of_catchment.toFixed(2)+'  %'],
+    ['Plan (L × W)',          s.cell_length_m+' × '+s.cell_width_m+'  m'],
+  ]);
+
+  // Layer table
+  tbl('tblLayer',[
+    ['Profile',               s.profile.replace('_',' ')],
+    ['Filter Depth',          s.filter_depth_mm+'  mm'],
+    ['Gravel Layer',          s.gravel_depth_mm+'  mm'],
+    ['Total Excavation',      s.excavation_mm+'  mm'],
+    ['WT Clearance',          s.wt_clearance_m.toFixed(3)+'  m'],
+  ]);
+
+  // Underdrain
+  tbl('tblUnderdrain',[
+    ['Q_max (Darcy)',         s.Q_max_Ls.toFixed(3)+'  L/s'],
+    ['Selected Pipe',         'Ø'+s.pipe_dia_mm+'mm UPVC'],
+    ['Pipe Utilisation',      s.pipe_util_pct.toFixed(1)+'  %'],
+    ['Specification',         s.pipe_rec],
+  ]);
+
+  // Drain-down
+  tbl('tblDraindown',[
+    ['Drain-Down Time',       s.drain_time_hr.toFixed(1)+'  hr'],
+    ['Status',                s.drain_ok ? '✓ Within 72 hr' : '✗ Exceeds 72 hr'],
+    ['Minor Overflow Q',      s.overflow_q_Ls.toFixed(2)+'  L/s'],
+    ['Standpipe',             'Ø'+s.overflow_standpipe_mm+'mm'],
+    ['Peak Inflow',           s.peak_inflow_Ls.toFixed(2)+'  L/s'],
+    ['Peak Outflow',          s.peak_outflow_Ls.toFixed(2)+'  L/s'],
+    ['Peak Reduction',        s.peak_red_pct.toFixed(1)+'  %'],
+  ]);
+
+  // Volume balance
+  const Vi = s.V_in_m3;
+  const segs = [
+    {v:s.V_underdrain_m3, label:'Underdrain', color:'#388bfd'},
+    {v:s.V_native_m3,     label:'Native Infiltration', color:'#3fb950'},
+    {v:s.V_overflow_m3,   label:'Overflow', color:'#f85149'},
+    {v:Math.max(0, Vi - s.V_underdrain_m3 - s.V_native_m3 - s.V_overflow_m3), label:'In-Cell Storage', color:'#ffa657'},
+  ];
+  g('volBar').innerHTML = segs.map(seg=>{
+    const pct = Vi>0 ? (seg.v/Vi*100).toFixed(1) : 0;
+    return `<div class="vol-seg" style="width:${pct}%;background:${seg.color}"
+               data-tip="${seg.label}: ${seg.v.toFixed(2)} m³ (${pct}%)"></div>`;
+  }).join('');
+  g('volLegend').innerHTML = segs.map(seg=>`
+    <span class="vol-leg-item">
+      <span class="vol-leg-dot" style="background:${seg.color}"></span>${seg.label}
+    </span>`).join('');
+
+  tbl('tblVolume',[
+    ['Event Inflow',          s.V_in_m3.toFixed(2)+'  m³'],
+    ['  ├ To underdrain',     s.V_underdrain_m3.toFixed(2)+'  m³'],
+    ['  ├ To native ground',  s.V_native_m3.toFixed(2)+'  m³'],
+    ['  └ Overflow',          s.V_overflow_m3.toFixed(2)+'  m³'],
+    ['Volume Captured',       s.V_captured_pct.toFixed(1)+'  %'],
+  ]);
+
+  // Pollutants
+  const polls = [
+    {name:'TSS', pct:s.tss_removal_pct, color:'#a371f7'},
+    {name:'TP',  pct:s.tp_removal_pct,  color:'#f78166'},
+    {name:'TN',  pct:s.tn_removal_pct,  color:'#ffa657'},
+  ];
+  g('pollGrid').innerHTML = polls.map(p=>`
+    <div class="poll-card">
+      <div class="p-name">${p.name}</div>
+      <div class="p-val">${p.pct.toFixed(1)}%</div>
+      <div class="p-bar-bg"><div class="p-bar" style="width:${p.pct}%;background:${p.color}"></div></div>
+    </div>`).join('');
+
+  // Checks
+  const checks = [
+    {label:'Filter Ksat 100–300 mm/hr', ok:s.ksat_ok,  val:''},
+    {label:'WT Clearance ≥ 0.6 m',      ok:s.wt_ok,   val:s.wt_clearance_m.toFixed(2)+'m'},
+    {label:'Drain-down ≤ 72 hr',         ok:s.drain_ok, val:s.drain_time_hr.toFixed(1)+'hr'},
+    {label:'Excavation ≤ 2.0 m',         ok:s.excav_ok, val:(s.excavation_mm/1000).toFixed(3)+'m'},
+    {label:'2% Catchment Rule',          ok:s.pct_of_catchment>=2, val:s.pct_of_catchment.toFixed(2)+'%'},
+    {label:'Cell Always Sized to Comply', ok:true,       val:'By design'},
+  ];
+  g('checksGrid').innerHTML = checks.map(c=>`
+    <div class="check-item">
+      <span class="ck-icon">${c.ok?'✅':'❌'}</span>
+      <span class="ck-label">${c.label}</span>
+      <span class="ck-val">${c.val}</span>
+    </div>`).join('');
+
+  // Figures
+  renderFigures(figures);
+}
+
+function tbl(id, rows){
+  g(id).innerHTML = rows.map(r=>`
+    <tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('');
+}
+
+// ── Figures gallery ───────────────────────────────────────────────────────────
+const FIG_LABELS = {
+  summary_dashboard: '📋 Summary Dashboard',
+  layer_detail:      '📏 Layer Profile',
+  cross_section:     '🏗 Cross-Section',
+  plan_view:         '🗺 Plan View',
+  hydrology:         '🌊 Hydrology',
+  draindown:         '⏱ Drain-Down',
+};
+
+function renderFigures(figures){
+  const sec = g('figuresSection');
+  const keys = Object.keys(figures || {});
+  if(!keys.length){ sec.style.display='none'; return; }
+  sec.style.display = 'block';
+
+  const tabs  = g('figTabs');
+  const panes = g('figPanes');
+  tabs.innerHTML  = '';
+  panes.innerHTML = '';
+
+  keys.forEach((key, i) => {
+    const label = FIG_LABELS[key] || key;
+    const url   = figures[key];
+
+    // Tab
+    const btn = document.createElement('button');
+    btn.className = 'fig-tab' + (i===0 ? ' active' : '');
+    btn.textContent = label;
+    btn.dataset.pane = key;
+    btn.onclick = () => switchFig(key);
+    tabs.appendChild(btn);
+
+    // Pane
+    const div = document.createElement('div');
+    div.className = 'fig-pane' + (i===0 ? ' active' : '');
+    div.id = 'figpane-' + key;
+    div.innerHTML = `<img src="${url}?t=${Date.now()}" alt="${label}" loading="lazy"/>`;
+    panes.appendChild(div);
+  });
+}
+
+function switchFig(key){
+  document.querySelectorAll('.fig-tab').forEach(b=>b.classList.toggle('active', b.dataset.pane===key));
+  document.querySelectorAll('.fig-pane').forEach(p=>p.classList.toggle('active', p.id==='figpane-'+key));
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg){
+  g('toastMsg').textContent = msg;
+  g('toast').classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, 5000);
+}
+function hideToast(){ g('toast').classList.remove('show'); }
+
+// keyboard shortcut
+document.addEventListener('keydown', e=>{
+  if((e.ctrlKey||e.metaKey) && e.key==='Enter') runDesign();
+});
+</script>
+</body>
+</html>
