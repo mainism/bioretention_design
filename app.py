@@ -26,6 +26,30 @@ PROFILES = [
     ("Type4_Pipeless",      "Type 4 — Pipeless"),
 ]
 
+# ── Startup diagnostics (visible in Render logs on every boot) ────────────────
+print("=" * 60)
+print("  BIORETENTION APP STARTUP")
+print(f"  ROOT        : {ROOT}")
+print(f"  templates/  : {os.path.exists(os.path.join(ROOT, 'templates'))}")
+print(f"  data/       : {os.path.exists(os.path.join(ROOT, 'data'))}")
+print(f"  src/        : {os.path.exists(os.path.join(ROOT, 'src'))}")
+_data_dir = os.path.join(ROOT, "data")
+if os.path.isdir(_data_dir):
+    print(f"  data files  : {os.listdir(_data_dir)}")
+_src_dir = os.path.join(ROOT, "src")
+if os.path.isdir(_src_dir):
+    print(f"  src files   : {os.listdir(_src_dir)}")
+os.makedirs(os.path.join(ROOT, "outputs", "plots"), exist_ok=True)
+print("  outputs/    : created/verified")
+print("=" * 60)
+
+
+# ── Routes ────────────────────────────────────────────────────────────────────
+@app.route("/health")
+def health():
+    """Render health-check endpoint — always returns 200 OK."""
+    return "OK", 200
+
 
 @app.route("/")
 def index():
@@ -42,7 +66,6 @@ def run_design():
         result = _engine(params)
         _last_result = result
 
-        # Build figure URL map  (relative paths the browser can fetch)
         fig_urls = {}
         for key, path in result.get("figures", {}).items():
             if path and os.path.exists(str(path)):
@@ -62,7 +85,7 @@ def run_design():
 
 @app.route("/figures/<path:filename>")
 def serve_figure(filename):
-    plots_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "outputs", "plots")
+    plots_dir = os.path.join(ROOT, "outputs", "plots")
     return send_from_directory(plots_dir, filename)
 
 
@@ -86,11 +109,14 @@ def download_calc_basis():
                      mimetype="text/html")
 
 
+@app.errorhandler(500)
+def internal_error(e):
+    tb = traceback.format_exc()
+    print("500 ERROR:\n", tb)
+    return f"<pre>500 Internal Server Error\n\n{tb}</pre>", 500
+
+
 if __name__ == "__main__":
-    import os as _os
-    port = int(_os.environ.get("PORT", 5000))
-    print("\n  ┌────────────────────────────────────────────────────┐")
-    print(f"  │   BIORETENTION DESIGN TOOL — Web Interface         │")
-    print(f"  │   Open  http://localhost:{port}  in your browser     │")
-    print("  └────────────────────────────────────────────────────┘\n")
+    port = int(os.environ.get("PORT", 5000))
+    print(f"\n  Open  http://localhost:{port}  in your browser\n")
     app.run(host="0.0.0.0", port=port, debug=False)
